@@ -1,0 +1,7 @@
+{
+  "name": "EJC SFC - Sistema de Gestão",
+  "description": "Sistema oficial de cadastro e gestão do EJC - Paróquia São Francisco das Chagas. Desenvolvido para alta performance e segurança de dados.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
