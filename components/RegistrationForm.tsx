@@ -2,7 +2,23 @@
 import React, { useState, useEffect } from 'react';
 import { Registration, User, UserRole, RegistrationType } from '../types.ts';
 import { SCHOOLING_OPTIONS, SERVICE_TEAMS, APP_THEME } from '../constants.ts';
-import { Camera, Save, AlertCircle, Trash2, Plus, Minus, Users, UserCheck, Heart, MapPin, Search, AlertOctagon } from 'lucide-react';
+import { 
+  Camera, 
+  Save, 
+  AlertCircle, 
+  Plus, 
+  Minus, 
+  Users, 
+  Heart, 
+  MapPin, 
+  Search, 
+  AlertOctagon,
+  GraduationCap,
+  Briefcase,
+  History,
+  Trophy,
+  Check
+} from 'lucide-react';
 
 interface RegistrationFormProps {
   currentUser: User;
@@ -28,6 +44,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
     birthDate: '',
     schooling: SCHOOLING_OPTIONS[0],
     profession: '',
+    ejcHistoryYear: '',
+    ejcHistoryCircle: '',
     sacraments: { baptism: false, eucharist: false, confirmation: false, none: false },
     isPastoralMember: false,
     hasMusicalTalent: false,
@@ -102,24 +120,18 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
     }
   };
 
-  const toggleTeam = (type: 'servedTeams' | 'coordinatedTeams', team: string) => {
+  const updateTeamCount = (type: 'servedTeams' | 'coordinatedTeams', team: string, delta: number) => {
     setFormData(prev => {
       const current = { ...(prev[type] || {}) };
-      const val = (current[team] || 0) + 1;
-      return {
-        ...prev,
-        [type]: { ...current, [team]: val > 0 ? val : 0 }
-      };
-    });
-  };
-
-  const decrementTeam = (type: 'servedTeams' | 'coordinatedTeams', team: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFormData(prev => {
-      const current = { ...(prev[type] || {}) };
-      const val = (current[team] || 0) - 1;
-      if (val <= 0) delete current[team];
-      else current[team] = val;
+      const currentVal = current[team] || 0;
+      const newVal = Math.max(0, currentVal + delta);
+      
+      if (newVal === 0) {
+        delete current[team];
+      } else {
+        current[team] = newVal;
+      }
+      
       return {
         ...prev,
         [type]: current
@@ -129,7 +141,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     const newReg: Registration = {
       ...formData as Registration,
@@ -142,8 +157,51 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
 
   const isIneligible = formData.type === RegistrationType.YOUTH && (formData.hasChildren || formData.isMarried);
 
+  const TeamSelector = ({ title, type, icon: Icon }: { title: string, type: 'servedTeams' | 'coordinatedTeams', icon: any }) => (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <h3 className="text-lg font-bold text-slate-800 mb-6 border-b pb-2 flex items-center gap-2">
+        <Icon className={`w-5 h-5 ${type === 'coordinatedTeams' ? 'text-amber-600' : 'text-slate-600'}`} />
+        {title}
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {SERVICE_TEAMS.map(team => {
+          const count = (formData[type] as any)?.[team] || 0;
+          return (
+            <div 
+              key={team} 
+              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                count > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'
+              }`}
+            >
+              <span className={`text-sm font-medium ${count > 0 ? 'text-amber-900' : 'text-slate-600'}`}>{team}</span>
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  onClick={() => updateTeamCount(type, team, -1)}
+                  className="p-1 rounded-md hover:bg-white text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className={`text-xs font-black w-4 text-center ${count > 0 ? 'text-amber-800' : 'text-slate-300'}`}>
+                  {count}
+                </span>
+                <button 
+                  type="button"
+                  onClick={() => updateTeamCount(type, team, 1)}
+                  className="p-1 rounded-md hover:bg-white text-slate-400 hover:text-green-600 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 pb-20">
+    <form onSubmit={handleSubmit} className="space-y-8 pb-32">
       <div className="flex bg-slate-200 p-1 rounded-2xl w-full sm:w-80 mx-auto shadow-inner">
         <button 
           type="button"
@@ -166,11 +224,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
           <AlertOctagon className="w-6 h-6 text-orange-600 shrink-0" />
           <div>
             <h4 className="font-bold text-orange-800">Atenção! Perfil Restrito</h4>
-            <p className="text-sm text-orange-700">Jovem com filho ou casado não pode participar do EJC (Norma Diocesana).</p>
+            <p className="text-sm text-orange-700">Jovem com filho ou casado não pode participar do EJC como encontrista (Norma Diocesana).</p>
           </div>
         </div>
       )}
 
+      {/* 1. Dados Pessoais */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <h3 className="text-lg font-bold text-slate-800 mb-6 border-b pb-2 flex items-center gap-2">
           {formData.type === RegistrationType.YOUTH ? <Users className="w-5 h-5 text-amber-800" /> : <Heart className="w-5 h-5 text-red-600" />}
@@ -184,7 +243,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
             ) : (
               <div className="w-32 h-40 bg-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-400 mb-2">
                 <Camera className="w-10 h-10" />
-                <span className="text-xs mt-2">Foto 3x4</span>
+                <span className="text-xs mt-2 text-center px-2">Clique para foto 3x4</span>
               </div>
             )}
             <input 
@@ -193,7 +252,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
               onChange={handlePhotoChange} 
               className="absolute inset-0 opacity-0 cursor-pointer" 
             />
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Clique para enviar</p>
           </div>
 
           <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -252,6 +310,32 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
                 className={`w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50 ${errors.birthDate ? 'border-red-500' : ''}`}
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                <GraduationCap className="w-4 h-4" /> Escolaridade
+              </label>
+              <select 
+                value={formData.schooling} 
+                onChange={e => setFormData({ ...formData, schooling: e.target.value })}
+                className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+              >
+                {SCHOOLING_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                <Briefcase className="w-4 h-4" /> Profissão
+              </label>
+              <input 
+                type="text" 
+                value={formData.profession} 
+                onChange={e => setFormData({ ...formData, profession: e.target.value })}
+                placeholder="Ex: Estudante, Engenheiro..."
+                className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+              />
+            </div>
           </div>
         </div>
 
@@ -290,27 +374,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
             />
           </div>
 
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Cidade *</label>
-            <input 
-              type="text" 
-              value={formData.city} 
-              onChange={e => setFormData({ ...formData, city: e.target.value })}
-              className={`w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50 ${errors.city ? 'border-red-500' : ''}`}
-            />
-          </div>
-
-          <div className="md:col-span-1">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Estado</label>
-            <input 
-              type="text" 
-              value={formData.state} 
-              onChange={e => setFormData({ ...formData, state: e.target.value })}
-              placeholder="Ex: SP"
-              className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50"
-            />
-          </div>
-
           <div className="md:col-span-1">
             <label className="block text-sm font-semibold text-slate-700 mb-1">Contato (Tel) *</label>
             <input 
@@ -321,13 +384,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
             />
           </div>
 
-          <div className="md:col-span-4">
+          <div className="md:col-span-3">
             <label className="block text-sm font-semibold text-slate-700 mb-1">Saúde / Alergias / Observações Importantes</label>
             <textarea 
               rows={2}
               value={formData.observations} 
               onChange={e => setFormData({ ...formData, observations: e.target.value })}
-              placeholder="Descreva alergias, restrições alimentares ou medicamentos de uso contínuo..."
+              placeholder="Descreva alergias, restrições alimentares ou medicamentos..."
               className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50"
             />
           </div>
@@ -359,9 +422,45 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
         )}
       </section>
 
-      {/* Seções de Sacramentos e Equipes mantidas com a lógica original... */}
+      {/* 2. Histórico no EJC */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h3 className="text-lg font-bold text-slate-800 mb-6 border-b pb-2">2. Informações Religiosas</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-6 border-b pb-2 flex items-center gap-2">
+          <History className="w-5 h-5 text-amber-800" />
+          2. Histórico no EJC
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Ano em que vivenciou o encontro</label>
+            <input 
+              type="text" 
+              value={formData.ejcHistoryYear} 
+              onChange={e => setFormData({ ...formData, ejcHistoryYear: e.target.value })}
+              placeholder="Ex: 2022"
+              className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Círculo Original</label>
+            <input 
+              type="text" 
+              value={formData.ejcHistoryCircle} 
+              onChange={e => setFormData({ ...formData, ejcHistoryCircle: e.target.value })}
+              placeholder="Ex: Azul, Amarelo, Verde..."
+              className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-amber-500 bg-slate-50"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Equipes que já SERVIU */}
+      <TeamSelector title="Equipes que já SERVIU" type="servedTeams" icon={Check} />
+
+      {/* 4. Equipes que já COORDENOU */}
+      <TeamSelector title="Equipes que já COORDENOU" type="coordinatedTeams" icon={Trophy} />
+
+      {/* 5. Informações Religiosas */}
+      <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h3 className="text-lg font-bold text-slate-800 mb-6 border-b pb-2">5. Vida Pastoral e Talentos</h3>
         
         <div className="mb-6">
           <label className="block text-sm font-semibold text-slate-700 mb-3">Sacramentos Recebidos:</label>
@@ -378,7 +477,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
                   }}
                   className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                 />
-                <span className="text-sm text-slate-700">{sac}</span>
+                <span className="text-sm text-slate-700 font-medium">{sac}</span>
               </label>
             ))}
           </div>
@@ -429,7 +528,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
         </div>
       </section>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 flex justify-end gap-3 md:left-64 z-10 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-200 flex justify-end gap-3 md:left-64 z-50 shadow-2xl">
         <button 
           type="button" 
           onClick={() => window.history.back()}
@@ -439,7 +538,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ currentUser, onSubm
         </button>
         <button 
           type="submit"
-          className="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-amber-800 text-white font-bold hover:bg-amber-900 shadow-md transition-all active:scale-95"
+          className="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-amber-800 text-white font-bold hover:bg-amber-900 shadow-xl transition-all active:scale-95"
         >
           <Save className="w-5 h-5" /> Salvar Cadastro
         </button>

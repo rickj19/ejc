@@ -1,17 +1,19 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Registration, UserLog, User, RegistrationType } from '../types.ts';
 import { 
   Users, 
-  Baby, 
   Heart, 
-  AlertTriangle,
   Clock,
   CheckCircle2,
   TrendingUp,
-  Activity
+  Activity,
+  Sparkles,
+  Quote,
+  Loader2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { GoogleGenAI } from "@google/genai";
 
 interface DashboardProps {
   registrations: Registration[];
@@ -20,6 +22,29 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ registrations, logs, users }) => {
+  const [reflection, setReflection] = useState<string>('');
+  const [loadingReflection, setLoadingReflection] = useState(false);
+
+  const generateReflection = async () => {
+    setLoadingReflection(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: 'Gere uma frase curta e inspiradora para uma equipe de jovens católicos do EJC (Encontro de Jovens com Cristo), baseada nos valores de São Francisco de Assis ou na alegria de servir. Máximo 280 caracteres.',
+      });
+      setReflection(response.text || '');
+    } catch (error) {
+      setReflection('Paz e Bem! Que a alegria de servir ao Cristo seja nossa força hoje.');
+    } finally {
+      setLoadingReflection(false);
+    }
+  };
+
+  useEffect(() => {
+    generateReflection();
+  }, []);
+
   const ineligible = registrations.filter(r => r.type === RegistrationType.YOUTH && (r.hasChildren || r.isMarried));
   const eligible = registrations.filter(r => r.type === RegistrationType.COUPLE || (r.type === RegistrationType.YOUTH && !r.hasChildren && !r.isMarried));
   
@@ -48,6 +73,34 @@ const Dashboard: React.FC<DashboardProps> = ({ registrations, logs, users }) => 
 
   return (
     <div className="space-y-6">
+      {/* Reflexão com IA */}
+      <div className="bg-gradient-to-r from-amber-800 to-amber-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <Quote className="w-24 h-24" />
+        </div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-amber-300" />
+            <h3 className="font-bold text-amber-100 uppercase tracking-widest text-xs">Reflexão para a Equipe</h3>
+          </div>
+          {loadingReflection ? (
+            <div className="flex items-center gap-2 text-amber-200/60 italic">
+              <Loader2 className="w-4 h-4 animate-spin" /> Gerando inspiração...
+            </div>
+          ) : (
+            <p className="text-lg font-medium leading-relaxed italic">
+              "{reflection}"
+            </p>
+          )}
+          <button 
+            onClick={generateReflection}
+            className="mt-4 text-[10px] font-bold uppercase tracking-tighter bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full transition-colors"
+          >
+            Nova Reflexão
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
